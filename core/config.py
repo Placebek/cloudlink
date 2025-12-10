@@ -26,13 +26,6 @@ class Settings(BaseSettings):
     TOKEN_ALGORITHM: str = "HS256"
     TOKEN_EXPIRE_MINUTES: int = 60 * 15  
 
-    # === Email ===
-    MAIL_USERNAME: str
-    MAIL_PASSWORD: str
-    MAIL_SERVER: str
-    MAIL_PORT: int = 587
-    MAIL_FROM: str = ""  
-
     # === Форматы ===
     DATETIME_FORMAT: str = "%d-%m-%Y %H:%M:%S"
 
