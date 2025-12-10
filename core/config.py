@@ -5,11 +5,12 @@ from pydantic_settings import (
 from core.config_path import BasePath
 from typing import Literal
 from pathlib import Path
+import platform
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-UPLOAD_DIR = BASE_DIR / "uploads"
-ANSIBLE_DIR = BASE_DIR / "ansible"
+ANSIBLE_DIR = Path("/home/saken/ansible_deploy")
+
+UPLOAD_DIR = ANSIBLE_DIR / "uploads"   
 
 UPLOAD_DIR.mkdir(exist_ok=True)
 
