@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.db import get_db
 import logging
 from core.config import settings
-from model.models import User, UserRole
+from model.models import User
 from sqlalchemy import select
 
 
@@ -117,9 +117,5 @@ async def require_expert(user_id: int = Depends(get_current_user_id), db: AsyncS
     
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
-    
-    if user.role != UserRole.expert:
-        logger.warning(f"User {user_id} ({user.role}) tried to access expert-only endpoint")
-        raise HTTPException(status_code=403, detail="Доступ запрещён: требуется роль эксперта")
     
     return user  
