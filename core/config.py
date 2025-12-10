@@ -4,7 +4,14 @@ from pydantic_settings import (
 )
 from core.config_path import BasePath
 from typing import Literal
+from pathlib import Path
 
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+UPLOAD_DIR = BASE_DIR / "uploads"
+ANSIBLE_DIR = BASE_DIR / "ansible"
+
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(

@@ -1,0 +1,16 @@
+- name: Deploy uploaded file to Raspberry Pi
+  hosts: raspberry
+  become: yes
+  tasks:
+    - name: Copy file to remote host
+      copy:
+        src: "{{ uploaded_file_path }}"
+        dest: "/home/pi/{{ uploaded_file_name }}"
+        owner: pi
+        group: pi
+        mode: '0644'
+      register: copy_result
+
+    - name: Show result
+      debug:
+        msg: "Файл {{ uploaded_file_name }} успешно скопирован на {{ inventory_hostname }}"
