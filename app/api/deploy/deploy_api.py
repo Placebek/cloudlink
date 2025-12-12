@@ -7,6 +7,8 @@ from app.api.deploy.schemas.response import PingResponse
 from datetime import datetime
 from typing import Dict, Any
 from app.api.deploy.commands.ws_command import manager
+import asyncio
+import aiohttp
 
 
 router = APIRouter()
@@ -34,36 +36,69 @@ async def upload_and_run(
     })
 
 
-online_devices: Dict[str, Any] = {}
+RASPBERRY_PIS = {
+    "pi1": "192.168.137.100",
+}
 
-@router.post("/ping")
-async def device_ping(request: dict):
-    device = request.get("device", "unknown")
-    ip = request.get("ip", "?.?.?.?")
-    status = request.get("status", "online")
+device_status = {}
 
-    online_devices[device] = {
-        "status": status,
-        "ip": ip,
-        "last_seen": datetime.now().strftime("%H:%M:%S")
-    }
+clients = set()
 
-    print(f"ONLINE → {device} ({ip})")
+connected_clients: set[WebSocket] = set()
 
-    await manager.broadcast({
+async def broadcast():
+    if not connected_clients:
+        return
+    message = {
         "type": "update",
-        "devices": online_devices
-    })
+        "devices": device_status.copy()
+    }
+    dead_clients = []
+    for client in connected_clients:
+        try:
+            await client.send_json(message)
+        except WebSocketDisconnect:
+            dead_clients.append(client)
+    for client in dead_clients:
+        connected_clients.discard(client)
 
-    return {"status": "ok"}
+
+async def ping_one(name: str, ip: str):
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ping", "-c", "1", "-W", "2", ip,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL
+        )
+        await proc.wait()
+        if proc.returncode == 0:
+            device_status[name] = {
+                "status": "online",
+                "ip": ip,
+                "last_seen": datetime.now().strftime("%H:%M:%S")
+            }
+        else:
+            device_status[name]["status"] = "offline"
+            device_status[name]["last_seen"] = datetime.now().strftime("%H:%M:%S")
+    except:
+        device_status[name]["status"] = "offline"
+        device_status[name]["last_seen"] = datetime.now().strftime("%H:%M:%S")
+
+
+async def ping_loop():
+    while True:
+        await asyncio.gather(*[ping_one(name, ip) for name, ip in RASPBERRY_PIS.items()])
+        await broadcast()
+        await asyncio.sleep(5)
 
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
-    await manager.broadcast({"type": "update", "devices": online_devices})
+    await websocket.accept()
+    connected_clients.add(websocket)
+    await websocket.send_json({"type": "update", "devices": device_status.copy()})
     try:
         while True:
             await websocket.receive_text()  
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        connected_clients.discard(websocket)
